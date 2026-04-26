@@ -21,8 +21,8 @@ export function ModernTheme({
         background: "#ffffff",
         fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
         color: "#1e293b",
-        maxWidth: "800px",
-        margin: "0 auto",
+        width: "100%",
+        boxSizing: "border-box",
         fontSize: "13px",
         lineHeight: "1.5",
       }}

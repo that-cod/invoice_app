@@ -38,9 +38,9 @@ export function GSTTheme({
         background: "#ffffff",
         fontFamily: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
         color: "#000000",
-        padding: "24px",
-        maxWidth: "800px",
-        margin: "0 auto",
+        padding: "20px 24px",
+        width: "100%",
+        boxSizing: "border-box",
         fontSize: "12px",
         lineHeight: "1.4",
       }}

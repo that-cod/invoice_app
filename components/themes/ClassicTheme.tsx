@@ -20,9 +20,9 @@ export function ClassicTheme({
         background: "#ffffff",
         fontFamily: "'Helvetica Neue', Arial, sans-serif",
         color: "#1f2937",
-        padding: "40px",
-        maxWidth: "800px",
-        margin: "0 auto",
+        padding: "32px 36px",
+        width: "100%",
+        boxSizing: "border-box",
         fontSize: "13px",
         lineHeight: "1.5",
       }}

@@ -24,8 +24,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { detectTaxType, getStateFromGSTIN } from "@/lib/gst"
 import { useAuth } from "@/lib/auth-context"
 import { Download } from "lucide-react"
-import { jsPDF } from "jspdf"
-import html2canvas from "html2canvas"
+import { downloadInvoiceAsPdf } from "@/lib/pdf"
 
 export default function CreateInvoicePage() {
   const router = useRouter()
@@ -445,18 +444,7 @@ export default function CreateInvoicePage() {
     setIsDownloading(true)
     toast({ title: "Generating PDF…", description: "This may take a few seconds." })
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      })
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight)
-      pdf.save(`${invoiceData.invoiceNumber || "invoice"}.pdf`)
+      await downloadInvoiceAsPdf("invoice-preview-container", invoiceData.invoiceNumber || "invoice")
       toast({ title: "Downloaded", description: `${invoiceData.invoiceNumber || "invoice"}.pdf saved.` })
     } catch {
       toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" })

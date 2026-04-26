@@ -15,8 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card as SkeletonCard, CardContent } from "@/components/ui/card"
-import { jsPDF } from "jspdf"
-import html2canvas from "html2canvas"
+import { downloadInvoiceAsPdf } from "@/lib/pdf"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -87,27 +86,12 @@ export default function InvoiceViewPage() {
   }
 
   const handleDownload = async () => {
-    const element = document.getElementById('invoice-preview-container')
-    if (!element) return
-
-    toast({ title: "Processing", description: "Generating PDF..." })
-
+    const inv = invoice as Record<string, unknown>
+    const filename = (inv?.invoice_number as string) || "invoice"
+    toast({ title: "Generating PDF…", description: "This may take a few seconds." })
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      })
-
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-      pdf.save(`${(invoice as Record<string, unknown>)?.invoice_number || 'invoice'}.pdf`)
-
-      toast({ title: "Success", description: "PDF downloaded." })
+      await downloadInvoiceAsPdf("invoice-preview-container", filename)
+      toast({ title: "Downloaded", description: `${filename}.pdf saved.` })
     } catch {
       toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" })
     }
