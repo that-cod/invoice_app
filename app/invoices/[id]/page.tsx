@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useState, useEffect, useRef } from "react"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,8 @@ import { Label } from "@/components/ui/label"
 export default function InvoiceViewPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const autoDownloadDone = useRef(false)
   const [invoice, setInvoice] = useState<Record<string, unknown> | null>(null)
   const [items, setItems] = useState<Record<string, unknown>[]>([])
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
@@ -67,6 +69,26 @@ export default function InvoiceViewPage() {
 
     if (params.id) loadInvoice()
   }, [params.id, router])
+
+  // Auto-download when navigated from the invoices list with ?download=1
+  useEffect(() => {
+    if (isLoading || !invoice || autoDownloadDone.current) return
+    if (searchParams.get("download") !== "1") return
+    autoDownloadDone.current = true
+    const inv = invoice as Record<string, unknown>
+    const filename = (inv.invoice_number as string) || "invoice"
+    // Small delay so InvoicePreview has time to paint
+    const t = setTimeout(async () => {
+      toast({ title: "Generating PDF…", description: "This may take a few seconds." })
+      try {
+        await downloadInvoiceAsPdf("invoice-preview-container", filename)
+        toast({ title: "Downloaded", description: `${filename}.pdf saved.` })
+      } catch {
+        toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" })
+      }
+    }, 600)
+    return () => clearTimeout(t)
+  }, [isLoading, invoice, searchParams])
 
   const handleStatusChange = async (status: string) => {
     setIsUpdating(true)

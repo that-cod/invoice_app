@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye, Download, MoreHorizontal, PlusCircle, FileText } from "lucide-react"
+import { Eye, Download, MoreHorizontal, PlusCircle, FileText, Edit } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,8 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { getInvoices, updateInvoiceStatus, deleteInvoice, getInvoiceById } from "@/app/actions/invoice-actions"
-import { jsPDF } from "jspdf"
+import { getInvoices, updateInvoiceStatus, deleteInvoice } from "@/app/actions/invoice-actions"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
@@ -23,6 +23,7 @@ export function InvoiceList() {
   const [invoices, setInvoices] = useState<Record<string, any>[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     async function loadInvoices() {
@@ -44,39 +45,10 @@ export function InvoiceList() {
     }
   }
 
-  const handleDownloadPdf = async (invoiceId: string) => {
-    const { data, error } = await getInvoiceById(invoiceId)
-    if (error || !data) return
-    const inv = data as Record<string, any>
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
-    pdf.setFontSize(18)
-    pdf.text(`Invoice ${inv.invoice_number}`, 20, 20)
-    pdf.setFontSize(11)
-    pdf.text(`Client: ${inv.clients?.name || "N/A"}`, 20, 32)
-    pdf.text(`Date: ${new Date(inv.issue_date).toLocaleDateString()}`, 20, 39)
-    pdf.text(`Due: ${new Date(inv.due_date).toLocaleDateString()}`, 20, 46)
-    pdf.text(`Status: ${inv.status}`, 20, 53)
-    pdf.text(`Total: \u20B9${Number(inv.total).toLocaleString("en-IN")}`, 20, 60)
-    const items: Record<string, any>[] = inv.items || []
-    if (items.length > 0) {
-      let y = 73
-      pdf.setFontSize(10)
-      pdf.text("Description", 20, y)
-      pdf.text("Qty", 110, y)
-      pdf.text("Rate", 135, y)
-      pdf.text("Amount", 160, y)
-      y += 5
-      pdf.line(20, y, 190, y)
-      y += 5
-      for (const item of items) {
-        pdf.text(String(item.description || ""), 20, y)
-        pdf.text(String(item.quantity), 110, y)
-        pdf.text(String(item.rate), 135, y)
-        pdf.text(String(item.amount), 160, y)
-        y += 6
-      }
-    }
-    pdf.save(`${inv.invoice_number || "invoice"}.pdf`)
+  // Navigate to the view page which renders the full themed invoice,
+  // then auto-triggers PDF download via ?download=1.
+  const handleDownloadPdf = (invoiceId: string) => {
+    router.push(`/invoices/${invoiceId}?download=1`)
   }
 
   const handleDeleteInvoice = async (id: string, invoiceNumber: string) => {
@@ -143,15 +115,17 @@ export function InvoiceList() {
               <TableRow key={invoice.id}>
                 <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                 <TableCell>{invoice.clients?.name || "Unknown Client"}</TableCell>
-                <TableCell>₹{invoice.total.toLocaleString("en-IN")}</TableCell>
+                <TableCell>&#8377;{invoice.total.toLocaleString("en-IN")}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
                       invoice.status === "paid"
                         ? "default"
-                        : invoice.status === "pending" || invoice.status === "draft"
-                          ? "outline"
-                          : "destructive"
+                        : invoice.status === "sent"
+                          ? "secondary"
+                          : invoice.status === "overdue"
+                            ? "destructive"
+                            : "outline"
                     }
                   >
                     {invoice.status}
@@ -168,19 +142,18 @@ export function InvoiceList() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/invoices/${invoice.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Link>
+                      <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}`)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)}>
                         <Download className="mr-2 h-4 w-4" />
                         Download
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/invoices/${invoice.id}`}>Edit / View</Link>
+                      <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit / View
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleStatusChange(invoice.id, "draft")}>
@@ -193,7 +166,10 @@ export function InvoiceList() {
                         Mark as Paid
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id, invoice.invoice_number)} className="text-destructive">
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteInvoice(invoice.id, invoice.invoice_number)}
+                        className="text-destructive"
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
